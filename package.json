@@ -1,0 +1,17 @@
+{
+  "name": "cake-booking-system",
+  "version": "1.0.0",
+  "description": "Cake Distribution System - Fair and simple scheduling for the classroom cake tax",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Static site - no build needed'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "vercel": "^33.0.0"
+  }
+}
