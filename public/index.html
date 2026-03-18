@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#7fb69a">
+    <meta name="description" content="Cake Distribution System - a fair and simple scheduling tool for the classroom cake tax.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Cake Booking | Svenja">
+    <meta property="og:description" content="Cake Distribution System - a fair and simple scheduling tool for the classroom cake tax.">
+    <title>Cake Booking | Svenja</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script>
+        (function() {
+            const saved = localStorage.getItem('cake-theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+        })();
+    </script>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Theme Toggle -->
+    <div class="theme-toggle-wrapper">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+            <span class="theme-icon-light">&#9728;&#65039;</span>
+            <span class="theme-icon-dark" style="display:none">&#127769;</span>
+        </button>
+    </div>
+
+    <div class="cake-booking" id="cakeBookingApp">
+        <!-- Header -->
+        <header class="cake-header">
+            <div class="cake-header__content">
+                <div class="cake-header__title">
+                    <div class="cake-header__icon-wrapper">&#127874;</div>
+                    <div>
+                        <h1>Cake Distribution System</h1>
+                        <p>Fair distribution. Simple scheduling.</p>
+                    </div>
+                </div>
+                <nav class="cake-header__nav">
+                    <button class="cake-nav-btn active" data-view="student">Book</button>
+                    <button class="cake-nav-btn" data-view="admin">Admin</button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Cake Tax Explanation -->
+        <section class="cake-intro">
+            <div class="cake-intro__content">
+                <h2>What is the Cake Tax?</h2>
+                <p>In my English class, there's one golden rule: <strong>we speak English!</strong>
+                If you slip into another language after a friendly reminder, you get to choose your "penalty":</p>
+                <div class="cake-intro__options">
+                    <div class="cake-intro__option">&#127874; Bake a cake for the class</div>
+                    <div class="cake-intro__option">&#128170; Do 100 push-ups</div>
+                    <div class="cake-intro__option">&#9997;&#65039; Write a short essay on why speaking English in class matters</div>
+                </div>
+                <p>Most students go for the cake (no surprise there!). This booking system helps you pick your option and schedule your date.</p>
+            </div>
+        </section>
+
+        <main class="cake-main" id="main-content">
+            <!-- STUDENT VIEW -->
+            <section class="cake-view cake-view--student active" id="studentView">
+                <div class="cake-progress">
+                    <div class="cake-progress__step active" data-step="1">1</div>
+                    <div class="cake-progress__line"></div>
+                    <div class="cake-progress__step" data-step="2">2</div>
+                    <div class="cake-progress__line"></div>
+                    <div class="cake-progress__step" data-step="3">3</div>
+                    <div class="cake-progress__line"></div>
+                    <div class="cake-progress__step" data-step="4">4</div>
+                </div>
+
+                <!-- Step 1: Name & Class -->
+                <div class="cake-step active" id="step1">
+                    <h2>Who are you?</h2>
+                    <div class="cake-form-group">
+                        <label for="studentName">Your Name</label>
+                        <input type="text" id="studentName" placeholder="First Name Last Name" autocomplete="name">
+                    </div>
+                    <div class="cake-form-group">
+                        <label>Your Class</label>
+                        <div class="cake-class-grid" id="classSelection"></div>
+                    </div>
+                    <button class="cake-btn cake-btn--primary cake-btn--full" id="toStep2" disabled>Next &rarr;</button>
+                </div>
+
+                <!-- Step 2: Penalty Type -->
+                <div class="cake-step" id="step2">
+                    <button class="cake-back-btn" data-to="1">&larr; Back</button>
+                    <h2>What would you like to do?</h2>
+                    <div class="cake-penalty-options" id="penaltySelection"></div>
+                </div>
+
+                <!-- Step 3: Date Selection -->
+                <div class="cake-step" id="step3">
+                    <button class="cake-back-btn" data-to="2">&larr; Back</button>
+                    <h2>When would you like to come?</h2>
+                    <div class="cake-date-list" id="dateSelection"></div>
+                </div>
+
+                <!-- Step 4: Confirmation -->
+                <div class="cake-step" id="step4">
+                    <button class="cake-back-btn" data-to="3">&larr; Back</button>
+                    <h2>Almost done!</h2>
+                    <div class="cake-summary" id="bookingSummary"></div>
+                    <div class="cake-email-section">
+                        <div class="cake-checkbox-group">
+                            <input type="checkbox" id="wantsReminder">
+                            <label for="wantsReminder">I want email reminders (optional)</label>
+                        </div>
+                        <div class="cake-email-fields" id="emailFields" style="display:none">
+                            <div class="cake-form-group">
+                                <label for="studentEmail">Email Address</label>
+                                <input type="email" id="studentEmail" placeholder="your.email@example.com" autocomplete="email" aria-describedby="emailError">
+                                <p class="cake-error" id="emailError" role="alert"></p>
+                            </div>
+                            <div class="cake-checkbox-group cake-checkbox-group--consent">
+                                <input type="checkbox" id="dataConsent" required aria-describedby="consentError">
+                                <label for="dataConsent">
+                                    I consent to my email address being stored and processed for appointment reminders. The data will be automatically deleted after the appointment.
+                                    <a href="#" class="cake-privacy-link" id="showPrivacyInfo">Learn more</a>
+                                </label>
+                                <p class="cake-error" id="consentError" role="alert"></p>
+                            </div>
+                        </div>
+                        <p class="cake-email-hint">Even without email, you'll get a calendar file to download with automatic reminders!</p>
+                    </div>
+                    <button class="cake-btn cake-btn--success cake-btn--full" id="confirmBooking">&#10003; Book Appointment</button>
+                </div>
+
+                <!-- Success Screen -->
+                <div class="cake-step" id="stepSuccess">
+                    <div class="cake-success">
+                        <div class="cake-success__icon">&#127881;</div>
+                        <h2>Appointment Booked!</h2>
+                        <p class="cake-success__message" id="successMessage"></p>
+                        <div class="cake-success__summary" id="successSummary"></div>
+                        <div class="cake-success__actions">
+                            <button class="cake-btn cake-btn--primary cake-btn--full" id="downloadCalendar">&#128197; Save Reminder to Calendar</button>
+                            <p class="cake-hint">The calendar file will remind you 3 days, 1 day, and on the day itself!</p>
+                            <button class="cake-btn cake-btn--outline cake-btn--full" id="newBooking">Another Booking</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ADMIN VIEW -->
+            <section class="cake-view cake-view--admin" id="adminView">
+                <div class="cake-admin-login" id="adminLogin">
+                    <div class="cake-admin-login__icon">&#128272;</div>
+                    <h2>Admin Area</h2>
+                    <label for="adminPassword" style="display:block; margin-bottom:0.5rem">Password</label>
+                    <input type="password" id="adminPassword" placeholder="Enter password..." aria-describedby="adminError">
+                    <p class="cake-error" id="adminError" role="alert"></p>
+                    <button class="cake-btn cake-btn--primary" id="adminLoginBtn">Unlock</button>
+                </div>
+                <div class="cake-admin-dashboard" id="adminDashboard" style="display:none">
+                    <div class="cake-admin-header">
+                        <h2>&#128203; All Bookings</h2>
+                        <div class="cake-admin-actions">
+                            <button class="cake-btn cake-btn--small cake-btn--outline" id="exportCSV">&#128202; CSV Export</button>
+                            <button class="cake-btn cake-btn--small cake-btn--outline" id="refreshData">&#128260; Refresh</button>
+                        </div>
+                    </div>
+                    <div class="cake-stats" id="adminStats"></div>
+                    <div class="cake-filter" id="classFilter"><span>Filter:</span></div>
+                    <div class="cake-bookings-list" id="bookingsList"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Privacy Modal -->
+        <div class="cake-modal" id="privacyModal">
+            <div class="cake-modal__content">
+                <button class="cake-modal__close" id="closePrivacyModal">&times;</button>
+                <h3>&#128274; Privacy Policy</h3>
+                <div class="cake-privacy-content">
+                    <h4>What data is collected?</h4>
+                    <ul>
+                        <li>Name (to identify your appointment)</li>
+                        <li>Class (to assign to the lesson)</li>
+                        <li>Email address (only if you want reminders)</li>
+                    </ul>
+                    <h4>What is the data used for?</h4>
+                    <ul>
+                        <li>Display your booked appointment</li>
+                        <li>Email reminders (3 days, 1 day, on the day - only with your consent)</li>
+                    </ul>
+                    <h4>How long is the data stored?</h4>
+                    <p>Your data will be automatically deleted 7 days after the booked appointment.</p>
+                    <h4>Your Rights</h4>
+                    <ul>
+                        <li>You can cancel your booking at any time</li>
+                        <li>You can request deletion of your data</li>
+                        <li>Contact: s.borgwardt@gso.schule.koeln</li>
+                    </ul>
+                    <h4>Voluntariness</h4>
+                    <p>Providing your email address is <strong>optional</strong>. You can also book without email and receive a calendar file for download.</p>
+                </div>
+                <button class="cake-btn cake-btn--primary cake-btn--full" id="acceptPrivacy">Understood</button>
+            </div>
+        </div>
+
+        <footer class="cake-footer">
+            <div class="cake-footer__content">
+                <span>make cake great again! &#127874;</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/js/cake-booking.js"></script>
+</body>
+</html>
