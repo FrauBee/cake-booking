@@ -145,19 +145,30 @@ async function hashPassword(password) {
         .join('');
 }
 
+/**
+ * Get local date string YYYY-MM-DD (avoids UTC timezone shift from toISOString)
+ */
+function toLocalDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 function isHolidayOrVacation(date) {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(date);
     if (HOLIDAYS_NRW.includes(dateStr)) return true;
     for (const vac of SCHOOL_HOLIDAYS_NRW) {
-        const start = new Date(vac.start);
-        const end = new Date(vac.end);
+        const start = new Date(vac.start + 'T00:00:00');
+        const end = new Date(vac.end + 'T23:59:59');
         if (date >= start && date <= end) return true;
     }
     return false;
 }
 
 function formatDate(dateStr) {
-    const date = new Date(dateStr);
+    // Parse as local date (not UTC) by appending time
+    const date = new Date(dateStr + 'T12:00:00');
     return date.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
     });
@@ -185,7 +196,7 @@ function getAvailableDates(className, penaltyType) {
             if (schedule.lastDate && current > new Date(schedule.lastDate)) continue;
 
             if (current.getDay() === schedule.day && !isHolidayOrVacation(current)) {
-                const dateStr = current.toISOString().split('T')[0];
+                const dateStr = toLocalDateStr(current);
                 const existingBookings = state.bookings.filter(
                     b => b.date === dateStr && b.class === className &&
                          b.penaltyType === penaltyType && !b.deleted
