@@ -15,10 +15,13 @@ const CONFIG = {
 };
 
 // Schedule - English classes only (day: 0=Sun, 1=Mon, 2=Tue, etc.)
+// Upper Level classes have a lastDate (letzter Schultag Oberstufe)
 const SCHEDULE = [
     { day: 2, start: '11:25', end: '12:55', class: 'IAF53', level: 'Lower Level', room: 'B117' },
-    { day: 3, start: '09:35', end: '11:05', class: 'IAF32', level: 'Upper Level', room: 'B117' },
-    { day: 3, start: '11:25', end: '12:55', class: 'IAF31', level: 'Upper Level', room: 'B117' },
+    { day: 3, start: '09:35', end: '11:05', class: 'IAF32', level: 'Upper Level', room: 'B117', lastDate: '2026-05-13' },
+    { day: 1, start: '13:15', end: '14:45', class: 'IAF32', level: 'Upper Level', room: 'B117', lastDate: '2026-05-13' },
+    { day: 1, start: '11:25', end: '12:55', class: 'IAF31', level: 'Upper Level', room: 'B117', lastDate: '2026-05-13' },
+    { day: 3, start: '11:25', end: '12:55', class: 'IAF31', level: 'Upper Level', room: 'B117', lastDate: '2026-05-13' },
     { day: 4, start: '11:25', end: '12:55', class: 'IAF52', level: 'Lower Level', room: 'B119' },
     { day: 4, start: '13:15', end: '14:45', class: 'IAF51', level: 'Lower Level', room: 'B119' }
 ];
@@ -45,7 +48,7 @@ const SCHOOL_HOLIDAYS_NRW = [
     { start: '2025-07-14', end: '2025-08-26' },
     { start: '2025-10-13', end: '2025-10-25' },
     { start: '2025-12-22', end: '2026-01-06' },
-    { start: '2026-03-30', end: '2026-04-11' },
+    { start: '2026-03-30', end: '2026-04-12' },
     { start: '2026-05-26', end: '2026-05-26' },
     { start: '2026-06-29', end: '2026-08-11' }
 ];
@@ -142,27 +145,39 @@ async function hashPassword(password) {
         .join('');
 }
 
+/**
+ * Get local date string YYYY-MM-DD (avoids UTC timezone shift from toISOString)
+ */
+function toLocalDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 function isHolidayOrVacation(date) {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(date);
     if (HOLIDAYS_NRW.includes(dateStr)) return true;
     for (const vac of SCHOOL_HOLIDAYS_NRW) {
-        const start = new Date(vac.start);
-        const end = new Date(vac.end);
+        const start = new Date(vac.start + 'T00:00:00');
+        const end = new Date(vac.end + 'T23:59:59');
         if (date >= start && date <= end) return true;
     }
     return false;
 }
 
 function formatDate(dateStr) {
-    const date = new Date(dateStr);
+    // Parse as local date (not UTC) by appending time
+    const date = new Date(dateStr + 'T12:00:00');
     return date.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
     });
 }
 
 function getAvailableDates(className, penaltyType) {
-    const classSchedule = SCHEDULE.find(s => s.class === className);
-    if (!classSchedule) return [];
+    // Find ALL schedule entries for this class (may have multiple days)
+    const classSchedules = SCHEDULE.filter(s => s.class === className);
+    if (classSchedules.length === 0) return [];
 
     const dates = [];
     const today = new Date();
@@ -171,21 +186,27 @@ function getAvailableDates(className, penaltyType) {
     const current = new Date(today);
     current.setDate(current.getDate() + 1);
 
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + CONFIG.weeksAhead * 7);
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(defaultEnd.getDate() + CONFIG.weeksAhead * 7);
 
-    while (current <= endDate) {
-        if (current.getDay() === classSchedule.day && !isHolidayOrVacation(current)) {
-            const dateStr = current.toISOString().split('T')[0];
-            const existingBookings = state.bookings.filter(
-                b => b.date === dateStr && b.class === className &&
-                     b.penaltyType === penaltyType && !b.deleted
-            );
-            const penaltyConfig = PENALTY_TYPES.find(p => p.id === penaltyType);
-            const spotsLeft = penaltyConfig.maxPerSession - existingBookings.length;
+    while (current <= defaultEnd) {
+        // Check each schedule entry for this class
+        for (const schedule of classSchedules) {
+            // Respect lastDate if set (e.g. letzter Schultag Oberstufe)
+            if (schedule.lastDate && current > new Date(schedule.lastDate)) continue;
 
-            if (spotsLeft > 0) {
-                dates.push({ date: new Date(current), dateStr, spotsLeft, schedule: classSchedule });
+            if (current.getDay() === schedule.day && !isHolidayOrVacation(current)) {
+                const dateStr = toLocalDateStr(current);
+                const existingBookings = state.bookings.filter(
+                    b => b.date === dateStr && b.class === className &&
+                         b.penaltyType === penaltyType && !b.deleted
+                );
+                const penaltyConfig = PENALTY_TYPES.find(p => p.id === penaltyType);
+                const spotsLeft = penaltyConfig.maxPerSession - existingBookings.length;
+
+                if (spotsLeft > 0) {
+                    dates.push({ date: new Date(current), dateStr, spotsLeft, schedule });
+                }
             }
         }
         current.setDate(current.getDate() + 1);
@@ -194,7 +215,7 @@ function getAvailableDates(className, penaltyType) {
 }
 
 function generateICS(booking) {
-    const classSchedule = SCHEDULE.find(s => s.class === booking.class);
+    const classSchedule = SCHEDULE.find(s => s.class === booking.class && s.start === booking.time) || SCHEDULE.find(s => s.class === booking.class);
     const penaltyInfo = PENALTY_TYPES.find(p => p.id === booking.penaltyType);
     const startDate = new Date(booking.date + 'T' + classSchedule.start + ':00');
     const endDate = new Date(booking.date + 'T' + classSchedule.end + ':00');
@@ -248,11 +269,22 @@ function exportCSV() {
 
 function renderClassSelection() {
     const container = document.getElementById('classSelection');
-    container.innerHTML = SCHEDULE.map(s => `
+    // Deduplicate classes (some have multiple days)
+    const uniqueClasses = [];
+    const seen = new Set();
+    for (const s of SCHEDULE) {
+        if (!seen.has(s.class)) {
+            seen.add(s.class);
+            const allDays = SCHEDULE.filter(x => x.class === s.class)
+                .map(x => DAY_NAMES[x.day]).join(' & ');
+            uniqueClasses.push({ ...s, displayDays: allDays });
+        }
+    }
+    container.innerHTML = uniqueClasses.map(s => `
         <div class="cake-class-card" data-class="${s.class}">
             <div class="cake-class-card__name">${s.class}</div>
             <div class="cake-class-card__level">${s.level}</div>
-            <div class="cake-class-card__time">${DAY_NAMES[s.day]} ${s.start}</div>
+            <div class="cake-class-card__time">${s.displayDays} ${s.start}</div>
         </div>
     `).join('');
 
